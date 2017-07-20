@@ -1,6 +1,7 @@
 import http.client, urllib.request, urllib.parse, urllib.error, base64, json, time
-from urllib.request import Request, ssl
-from urllib.error import URLError, HTTPError
+
+user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) \
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
 
 def im_search(keyword,count,offset,api_key):
     headers = {
@@ -32,36 +33,34 @@ AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
     
     return data
 
-# Parses out the image url from the bing url (contentUrl value from the json)
-def parse_bing_url(contentUrl):
-    query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(contentUrl).query))
-    return query_dict['r']
-
-##Call this at your own risk
+#Call this at your own risk
 def download_im(data):
     url_list = [val['contentUrl'] for val in data['value']]
     im_format = [val['encodingFormat'] for val in data['value']]
     
+    im_url = []
+    
+    for j in range(len(url_list)):
+        parsed = urllib.parse.parse_qs(urllib.parse.urlparse(url_list[j]).query)
+        im_url.append(parsed['r'][0]) 
+
     for i in range(len(url_list)): 
         if (im_format[i] == 'jpeg' or im_format[i] == 'jpg' or im_format == 'png'):
-            url = parse_bing_url(url_list[i])
             filename = 'img_00' + str(i) + '.' + im_format[i]
-            print(url, filename) # for debugging
             
-            try:
-                req = urllib.request.Request(url, headers={'User-Agent':'Magic Browser'})
-                img = urllib.request.urlopen(req)
-                #img = urllib.request.urlopen(url_list[i])
-                output = open(filename, "wb")
-                output.write(img.read())
-                output.close()
-                time.sleep(2)
-            except HTTPError as e:
-                print(e.code)
-            except URLError as e:
-                print(e.reason)
-            except ssl.CertificateError as e:
-                print(e)
-
-        else:
+        try:
+            req = urllib.request.Request(im_url[i], headers={'User-Agent': user_agent})
+            img = urllib.request.urlopen(req)
+            output = open(filename, "wb")
+            output.write(img.read())
+            output.close()
+            time.sleep(2)
+        except urllib.error.HTTPError as e:
+            print(e.code)
+            pass
+        except urllib.error.URLError as e:
+            print(e.reason)
+            pass
+        except urllib.request.ssl.CertificateError as e:
+            print (e.reason)
             pass
