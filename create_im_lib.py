@@ -62,7 +62,7 @@ def download_im(data, offset=0):
                 print(e.reason)
                 pass
             except urllib.request.ssl.CertificateError as e:
-                print (e.reason)
+                print (e)
                 pass
 
     print('Offset to add to count:', data["nextOffsetAddCount"])
