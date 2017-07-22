@@ -68,7 +68,7 @@ def download_im(data, offset=0):
     print('Offset to add to count:', data["nextOffsetAddCount"])
 
 if len(sys.argv) < 5:
-    print("Usage: python create_im_lib.py <api-key> <query> <count> <offset> [<output-dir>] (optional)")
+    print("Usage: python create_im_lib.py <api-key> <query> <count> <offset> [<output-dir> (optional)]")
     sys.exit(2)
 
 apikey = sys.argv[1]
