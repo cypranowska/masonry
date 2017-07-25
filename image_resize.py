@@ -1,5 +1,4 @@
 from PIL import Image
-from resizeimage import resizeimage
 import os, sys
 
 if len(sys.argv) < 3:
@@ -13,6 +12,6 @@ for subdir, dirs, files in os.walk(rootdir):
     for f in files:
 
         img = Image.open(subdir+'/'+ f)
-        img = resizeimage.resize_thumbnail(img, [size, size])
-        img.save(subdir+'/'+ f,img.format)
+        newimg = img.resize((size, size))
+        newimg.save(subdir+'/'+ f,img.format)
         img.close()
