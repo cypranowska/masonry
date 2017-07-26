@@ -1063,37 +1063,38 @@ def main(_):
                                 intermediate_file_name)
                 save_graph_to_file(sess, graph, intermediate_file_name)
 
-            # We've completed all our training, so run a final test evaluation on
-            # some new images we haven't used before.
-            test_bottlenecks, test_ground_truth, test_filenames = (
+        # We've completed all our training, so run a final test evaluation on
+        # some new images we haven't used before.
+        test_bottlenecks, test_ground_truth, test_filenames = (
                 get_random_cached_bottlenecks(
                     sess, image_lists, FLAGS.test_batch_size, 'testing',
                     FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
                     decoded_image_tensor, resized_image_tensor, bottleneck_tensor,
                     FLAGS.architecture))
-            test_accuracy, predictions = sess.run(
-                [evaluation_step, prediction],
+        test_accuracy, predictions, cross_entropy_value = sess.run(
+                [evaluation_step, prediction, cross_entropy],
                 feed_dict={bottleneck_input: test_bottlenecks,
                            ground_truth_input: test_ground_truth})
-            tf.logging.info('Final test accuracy = %.1f%% (N=%d)' %
+        tf.logging.info('Final test accuracy = %.1f%% (N=%d)' %
                             (test_accuracy * 100, len(test_bottlenecks)))
+        tf.logging.info('Final cross entropy = %f' %
+                    (cross_entropy_value))
 
-            if FLAGS.print_misclassified_test_images:
-              tf.logging.info('=== MISCLASSIFIED TEST IMAGES ===')
-              for i, test_filename in enumerate(test_filenames):
-                if predictions[i] != test_ground_truth[i].argmax():
-                  tf.logging.info('%70s  %s' %
-                                  (test_filename,
+        if FLAGS.print_misclassified_test_images:
+            tf.logging.info('=== MISCLASSIFIED TEST IMAGES ===')
+            for i, test_filename in enumerate(test_filenames):
+              if predictions[i] != test_ground_truth[i].argmax():
+                tf.logging.info('%70s  %s' % (test_filename,
                                    list(image_lists.keys())[predictions[i]]))
 
-            # Write out the trained graph and labels with the weights stored as
-            # constants.
-            save_graph_to_file(sess, graph, '/tmp/output_graph'+str(l)+'.pb')
-            if l == 0:
-                with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
-                  f.write('\n'.join(image_lists.keys()) + '\n')
-            else:
-                continue
+        # Write out the trained graph and labels with the weights stored as
+        # constants.
+        save_graph_to_file(sess, graph, '/tmp/output_graph'+str(l)+'.pb')
+        if l == 0:
+          with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
+            f.write('\n'.join(image_lists.keys()) + '\n')
+        else:
+          continue
 
     sess.close()
 
