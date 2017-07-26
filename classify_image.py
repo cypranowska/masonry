@@ -21,6 +21,31 @@ def create_graph(modelFullPath):
         graph_def.ParseFromString(f.read())
         _ = tf.import_graph_def(graph_def, name='')
 
+def print_top_5_predictions(modelFullPath, labelsFullPath, imagePath):
+    if not tf.gfile.Exists(imagePath):
+        tf.logging.fatal('File does not exist %s', imagePath)
+        return answer
+
+    image_data = tf.gfile.FastGFile(imagePath, 'rb').read()
+
+    # Creates graph from saved GraphDef.
+    create_graph(modelFullPath)
+
+    with tf.Session() as sess:
+        softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
+        predictions = sess.run(softmax_tensor,
+                               {'DecodeJpeg/contents:0': image_data})
+        predictions = np.squeeze(predictions)
+
+        top_k = predictions.argsort()[-5:][::-1]  # Getting top 5 predictions
+        f = open(labelsFullPath, 'r')
+        lines = f.readlines()
+        labels = [str(w).replace("\n", "") for w in lines]
+        for node_id in top_k:
+            human_string = labels[node_id]
+            score = predictions[node_id]
+            print('%s (score = %.5f)' % (human_string, score))
+
 def run_inference_on_images(modelFullPath, labelsFullPath, imagePaths):
     answer = None
     pred_labels = []
