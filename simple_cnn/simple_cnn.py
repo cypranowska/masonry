@@ -2,13 +2,14 @@ from keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.utils import np_utils
+from keras.optimizers import Adam
 from keras import backend as K
 import tensorflow as tf
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import GridSearchCV
-from keras.wrappers.scikit_learn import KerasClassifier
 import numpy as np
+from PIL import Image
 import glob
 import os
 
@@ -51,14 +52,14 @@ def load_data(data_dir):
             labels.append(6)
         else:
             labels.append(7)
-            
+    
     data = []
     for file in file_list:
-        img = load_img(file)  # this is a PIL image
-        x = img_to_array(img)
+        img = load_img(file)
+        x = img_to_array(img, data_format='channels_last')
         data.append(x)
     
-    data = np.asarray(data)
+    data = np.asarray(data)/255.
     labels = np.asarray(labels)
     return data, labels
 
@@ -68,6 +69,7 @@ def create_model():
     model.add(Conv2D(32, (3, 3), input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
 
     model.add(Conv2D(32, (3, 3)))
     model.add(Activation('relu'))
@@ -78,43 +80,30 @@ def create_model():
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
     model.add(Flatten())
-    model.add(Dense(64))
+    model.add(Dense(128))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(1))
+    model.add(Dense(8))
     model.add(Activation('sigmoid'))
+    
+    optimizer = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.1)
 
     model.compile(loss='binary_crossentropy',
-                  optimizer='rmsprop',
+                  optimizer=optimizer,
                   metrics=['accuracy'])
 
     return model
 
-def grid_search(X,Y):
-    model = KerasClassifier(build_fn=create_model, verbose=0)
-    # define the grid search parameters
-    batch_size = [10, 20, 40, 60, 80, 100]
-    epochs = [10, 50, 100]
-    param_grid = dict(batch_size=batch_size, epochs=epochs)
-    grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1)
-    grid_result = grid.fit(X, Y)
-    # summarize results
-    print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
-    means = grid_result.cv_results_['mean_test_score']
-    stds = grid_result.cv_results_['std_test_score']
-    params = grid_result.cv_results_['params']
-    for mean, stdev, param in zip(means, stds, params):
-        print("%f (%f) with: %r" % (mean, stdev, param))
-
-def train_eval_model(model, training_data, training_labels, test_data, test_labels):
+def train_eval_model(model, training_data, training_labels, test_data, test_labels, callbacks):
     validation_data = (test_data, test_labels)
     model.fit(
         training_data,
         training_labels,
-        batch_size = 10,
-        epochs = 190,
-        validation_data = validation_data)
-
+        batch_size = 32,
+        epochs = 10,
+        validation_data = validation_data,
+        callback = callbacks)
+    
 if __name__ == "__main__":
     img_width, img_height = 150, 150
     data_dir = '~/img_lib_150'
@@ -124,12 +113,14 @@ if __name__ == "__main__":
     skf.get_n_splits(data, labels)
 
     for train, test in skf.split(data, labels):
-            X_train, X_test = data[train], data[test]
-            y_train, y_test = labels[train], labels[test]
-            model = None # Clearing the NN.
-            model = create_model()
-            # checkpoint
-            filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5"
-            checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-            callbacks_list = [checkpoint]
-            train_eval_model(model, X_train, y_train, X_test, y_test)
+        X_train, X_test = data[train], data[test]
+        y_train, y_test = labels[train], labels[test]
+        y_train, y_test = np_utils.to_categorical(y_train), np_utils.to_categorical(y_test)
+        model = None # Clearing the NN.
+        model = create_model()
+        # checkpoint
+        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        tbcall = TensorBoard(log_dir='./logs', histogram_freq=1, batch_size=32, write_graph=True)
+        callbacks_list = [checkpoint, tbcall]
+        train_eval_model(model, X_train, y_train, X_test, y_test, callbacks_list)
