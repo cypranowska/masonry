@@ -12,6 +12,8 @@ import numpy as np
 from PIL import Image
 import glob
 import os
+from datetime import datetime
+
 
 def load_data(data_dir):
     img_width, img_height = 150, 150
@@ -109,18 +111,28 @@ if __name__ == "__main__":
     data_dir = '~/img_lib_150'
     n_folds = 10
     data, labels = load_data(data_dir)
-    skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
     skf.get_n_splits(data, labels)
 
-    i=0
+    count = 0
+    now = datetime.now()
+    log_dir = "./logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+
     for train, test in skf.split(data, labels):
+        print('Cross-validation round %d' % count)
+
         X_train, X_test = data[train], data[test]
         y_train, y_test = labels[train], labels[test]
         y_train, y_test = np_utils.to_categorical(y_train), np_utils.to_categorical(y_test)
         K.clear_session()
         model = None # Clearing the NN.
         model = create_model()
-        tbcallback = TensorBoard(log_dir = './logs', batch_size=32, histogram_freq=1, write_graph=True)
-        train_eval_model(model, X_train, y_train, X_test, y_test, [tbcallback])
-        model.save_weights("model"+str(i)+".h5")
-        i += 1
+        # checkpoint
+        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}-%d.hdf5" % count
+        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+
+        tbcall = TensorBoard(log_dir=log_dir, histogram_freq=1, batch_size=32, write_graph=True)
+        callbacks_list = [checkpoint, tbcall]
+        train_eval_model(model, X_train, y_train, X_test, y_test, callbacks_list)
+        count += 1
+
