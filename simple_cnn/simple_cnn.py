@@ -12,9 +12,11 @@ import numpy as np
 from PIL import Image
 import glob
 import os
+from datetime import datetime
+
 
 def load_data(data_dir):
-    img_width, img_height = 150, 150
+    img_width, img_height = 32, 32
 
     data_dir = os.path.expanduser(data_dir)
 
@@ -102,25 +104,37 @@ def train_eval_model(model, training_data, training_labels, test_data, test_labe
         batch_size = 32,
         epochs = 10,
         validation_data = validation_data,
-        callback = callbacks)
+        callbacks = callbacks)
     
 if __name__ == "__main__":
-    img_width, img_height = 150, 150
-    data_dir = '~/img_lib_150'
+    img_width, img_height = 32, 32
+    data_dir = '~/Desktop/small_images'
     n_folds = 10
     data, labels = load_data(data_dir)
-    skf = StratifiedKFold(n_splits=10, shuffle=True)
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
     skf.get_n_splits(data, labels)
 
+    count = 0
+    now = datetime.now()
+    log_dir = "./logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+
     for train, test in skf.split(data, labels):
+        count += 1
+        print('Cross-validation round %d' % count)
+        K.clear_session()
+
         X_train, X_test = data[train], data[test]
         y_train, y_test = labels[train], labels[test]
         y_train, y_test = np_utils.to_categorical(y_train), np_utils.to_categorical(y_test)
         model = None # Clearing the NN.
         model = create_model()
         # checkpoint
-        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5"
+        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}-%d.hdf5" % count
         checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        tbcall = TensorBoard(log_dir='./logs', histogram_freq=1, batch_size=32, write_graph=True)
+
+        tbcall = TensorBoard(log_dir=log_dir, histogram_freq=1, batch_size=32, write_graph=True)
         callbacks_list = [checkpoint, tbcall]
         train_eval_model(model, X_train, y_train, X_test, y_test, callbacks_list)
+
+
+
