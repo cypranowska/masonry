@@ -100,27 +100,27 @@ def train_eval_model(model, training_data, training_labels, test_data, test_labe
         training_data,
         training_labels,
         batch_size = 32,
-        epochs = 10,
+        epochs = 15,
         validation_data = validation_data,
-        callback = callbacks)
+        callbacks = callbacks)
     
 if __name__ == "__main__":
     img_width, img_height = 150, 150
     data_dir = '~/img_lib_150'
     n_folds = 10
     data, labels = load_data(data_dir)
-    skf = StratifiedKFold(n_splits=10, shuffle=True)
+    skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
     skf.get_n_splits(data, labels)
 
+    i=0
     for train, test in skf.split(data, labels):
         X_train, X_test = data[train], data[test]
         y_train, y_test = labels[train], labels[test]
         y_train, y_test = np_utils.to_categorical(y_train), np_utils.to_categorical(y_test)
+        K.clear_session()
         model = None # Clearing the NN.
         model = create_model()
-        # checkpoint
-        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        tbcall = TensorBoard(log_dir='./logs', histogram_freq=1, batch_size=32, write_graph=True)
-        callbacks_list = [checkpoint, tbcall]
-        train_eval_model(model, X_train, y_train, X_test, y_test, callbacks_list)
+        tbcallback = TensorBoard(log_dir = './logs', batch_size=32, histogram_freq=1, write_graph=True)
+        train_eval_model(model, X_train, y_train, X_test, y_test, [tbcallback])
+        model.save_weights("model"+str(i)+".h5")
+        i += 1
