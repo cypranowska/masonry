@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
@@ -27,9 +29,9 @@ def plot_confusion_matrix(y_true,y_pred, normalize=False, filename='confusion_ma
         colorscale_label = 'Normalized # of images'
     cbar.set_label(colorscale_label, rotation=270, labelpad=15, fontsize=12)
     xtick_marks = np.arange(len(true_labels))
-    ytick_marks = np.arange(len(pred_labels))
+    ytick_marks = np.arange(len(true_labels))
     plt.xticks(xtick_marks, true_labels, rotation=90)
-    plt.yticks(ytick_marks,pred_labels)
+    plt.yticks(ytick_marks, true_labels)
 
     plt.ylabel('True label', fontsize=14)
     plt.xlabel('Predicted label', fontsize=14)
