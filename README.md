@@ -85,6 +85,10 @@ The `--logdir` flag must be used to specify the location of the parent directory
 ___
 ## Training a simple CNN from scratch
 
+The simple CNN has 3 convolutional layers with ReLU activation and 2x2 MaxPool. These layers are followed by a 128 neuron fully connected layer with ReLU activation and 50% dropout. The output layer contains 8 neurons with softmax activation. 
+
+![architecture](simple_cnn/simple_cnn_arch.png)
+
 A simple CNN can be built and trained with `simple_cnn.py`:
 
 ```
