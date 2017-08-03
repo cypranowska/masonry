@@ -94,7 +94,7 @@ def create_model(num_classes):
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
-    model.add(Activation('sigmoid'))
+    model.add(Activation('softmax'))
     
     optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.01)
 
