@@ -81,5 +81,20 @@ The `--logdir` flag must be used to specify the location of the parent directory
   * `--num_runs`: Number of runs to perform training and cross-validation
   * `--learning_rate`: Learning rate for calculating the gradient. `retrain_kfold.py` uses a Stochastic Gradient Descent optimizer.
   
-  **Command line arguments for specifying output directories, using image distortion, etc. are commented in `retrain_kfold.py`
+  **Command line arguments for specifying output directories, using image distortion, etc. are commented in `retrain_kfold.py`**
+___
+## Training a simple CNN from scratch
+
+A simple CNN can be built and trained with `simple_cnn.py`:
+
+```
+python simple_cnn.py <img_dir> <img_width> <img_height>
+```
+  * `<img_dir>`: the parent directory containing images for training and validation
+  * `<img_width>`: the width of the images in the library
+  * `<img_height>`: the height of the images in the library
+  
+  The `<img_width>` and `<img_height>` arguments will be used to specify the dimensions of the expected input to the first layer of the model. `simple_cnn.py` splits the data in `<img_dir>` into 10-fold training and validation sets. The model is trained for 15 epochs. Model checkpoints are created after each epoch in which the validation accuracy increases. Training progress can be monitored with TensorBoard when pointed to the `./logs` directory that is created when the script is executed.
+  
+  
 
