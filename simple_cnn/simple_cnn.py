@@ -13,17 +13,25 @@ from PIL import Image
 import glob
 import os
 from datetime import datetime
+import sys
 
+if len(sys.argv) < 4:
+    print("Usage: python simple_cnn.py <data_dir> <img_width> <img_height>")
+    sys.exit(2)
+    
+data_dir = sys.argv[1]
+img_width = int(sys.argv[2])
+img_height = int(sys.argv[3])
 
 def load_data(data_dir):
-    img_width, img_height = 150, 150
-
     data_dir = os.path.expanduser(data_dir)
 
     label_names = []                  
     for r, d, files in os.walk(data_dir):
         for i in range(len(d)):
             label_names.append(d[i])
+    
+    num_classes = len(label_names)
 
     sub_dirs = [x[0] for x in os.walk(data_dir)]
     dir_names = [os.path.basename(sub_dir) for sub_dir in sub_dirs]
@@ -63,15 +71,14 @@ def load_data(data_dir):
     
     data = np.asarray(data)/255.
     labels = np.asarray(labels)
-    return data, labels
+    return data, labels, num_classes
 
-def create_model():
+def create_model(num_classes):
     input_shape = (img_width, img_height, 3)
     model = Sequential()
     model.add(Conv2D(32, (3, 3), input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
 
     model.add(Conv2D(32, (3, 3)))
     model.add(Activation('relu'))
@@ -85,12 +92,12 @@ def create_model():
     model.add(Dense(128))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(8))
-    model.add(Activation('sigmoid'))
+    model.add(Dense(num_classes))
+    model.add(Activation('softmax'))
     
-    optimizer = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.1)
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.01)
 
-    model.compile(loss='binary_crossentropy',
+    model.compile(loss='categorical_crossentropy',
                   optimizer=optimizer,
                   metrics=['accuracy'])
 
@@ -106,33 +113,33 @@ def train_eval_model(model, training_data, training_labels, test_data, test_labe
         validation_data = validation_data,
         callbacks = callbacks)
     
-if __name__ == "__main__":
-    img_width, img_height = 150, 150
-    data_dir = '~/img_lib_150'
+def main():
     n_folds = 10
-    data, labels = load_data(data_dir)
-    skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
+    data, labels, num_classes = load_data(data_dir)
+    skf = StratifiedKFold(n_splits = n_folds, shuffle=True, random_state = 7)
     skf.get_n_splits(data, labels)
-
+    
     count = 0
     now = datetime.now()
     log_dir = "./logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
-
+    
     for train, test in skf.split(data, labels):
-        print('Cross-validation round %d' % count)
-
+        print ('Cross-validation round %d' % count)
+        
         X_train, X_test = data[train], data[test]
         y_train, y_test = labels[train], labels[test]
         y_train, y_test = np_utils.to_categorical(y_train), np_utils.to_categorical(y_test)
         K.clear_session()
         model = None # Clearing the NN.
-        model = create_model()
+        model = create_model(num_classes)
         # checkpoint
         filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}-%d.hdf5" % count
         checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-
+        # creating tensorboard callback
         tbcall = TensorBoard(log_dir=log_dir, histogram_freq=1, batch_size=32, write_graph=True)
         callbacks_list = [checkpoint, tbcall]
         train_eval_model(model, X_train, y_train, X_test, y_test, callbacks_list)
         count += 1
-
+    
+if __name__ == "__main__":
+    main()
